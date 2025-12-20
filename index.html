@@ -89,7 +89,7 @@
         `;
 
         // Подключение к Signal серверу
-        const ws = new WebSocket("ws://localhost:8080"); // <- если на VPS, укажи IP сервера
+        const ws = new WebSocket("ws://IP_ИЛИ_ДОМЕН_СЕРВЕРА:8080"); // <- если на VPS, укажи IP сервера
         const peer = new SimplePeer({ initiator: true, trickle: false, stream: null });
 
         // Локальное видео и микрофон
