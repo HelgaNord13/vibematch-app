@@ -3,14 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <title>Vibe App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
 
   <body style="font-family: sans-serif; padding: 20px;">
     <h1>Vibe Match</h1>
 
-    <div id="content">Загружаем Telegram данные…</div>
+    <div id="app">Загрузка…</div>
 
     <script>
       const tg = window.Telegram.WebApp;
@@ -18,15 +21,72 @@
 
       const user = tg.initDataUnsafe?.user;
 
-      if (user) {
-        document.getElementById("content").innerHTML = `
-          <p><b>Привет, ${user.first_name}</b></p>
-          <p>Твой Telegram ID: ${user.id}</p>
+      const questions = [
+        {
+          id: "depth",
+          text: "Тебе важнее глубина или лёгкость?",
+          options: [
+            { text: "Глубина", value: 7 },
+            { text: "Лёгкость", value: 3 }
+          ]
+        },
+        {
+          id: "freedom",
+          text: "Свобода для тебя — это…",
+          options: [
+            { text: "Делать, что чувствую", value: 7 },
+            { text: "Иметь стабильность", value: 3 }
+          ]
+        },
+        {
+          id: "ambition",
+          text: "Тебя больше тянет к…",
+          options: [
+            { text: "Большим целям", value: 7 },
+            { text: "Спокойной жизни", value: 3 }
+          ]
+        }
+      ];
+
+      let current = 0;
+      const answers = {};
+
+      function renderQuestion() {
+        const q = questions[current];
+        document.getElementById("app").innerHTML = `
+          <p><b>${q.text}</b></p>
+          ${q.options
+            .map(
+              (o) =>
+                `<button style="margin: 8px 0; width: 100%; padding: 12px;"
+                  onclick="answer('${q.id}', ${o.value})">
+                  ${o.text}
+                </button>`
+            )
+            .join("")}
         `;
-      } else {
-        document.getElementById("content").innerText =
-          "Не удалось получить данные пользователя";
       }
+
+      function answer(id, value) {
+        answers[id] = value;
+        current++;
+
+        if (current < questions.length) {
+          renderQuestion();
+        } else {
+          showResult();
+        }
+      }
+
+      function showResult() {
+        document.getElementById("app").innerHTML = `
+          <p><b>Анкета заполнена</b></p>
+          <p>Спасибо, ${user?.first_name || "друг"}!</p>
+          <pre>${JSON.stringify(answers, null, 2)}</pre>
+        `;
+      }
+
+      renderQuestion();
     </script>
   </body>
 </html>
