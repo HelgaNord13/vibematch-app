@@ -6,9 +6,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        background-color: #ffffff;
+        color: #000000;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      button {
+        background-color: #007bff;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 12px;
+        width: 100%;
+        margin: 8px 0;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .user-card {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 8px 0;
+        border-radius: 8px;
+      }
+
+      video {
+        width: 100%;
+        margin-top: 10px;
+        border-radius: 8px;
+        background-color: #000;
+      }
+    </style>
   </head>
 
-  <body style="font-family: sans-serif; padding: 20px;">
+  <body>
     <h1>Vibe Match</h1>
     <div id="app">Загрузка…</div>
 
@@ -17,7 +60,6 @@
       tg.ready();
       const user = tg.initDataUnsafe?.user;
 
-      // Анкета
       const questions = [
         { id: "depth", text: "Тебе важнее глубина или лёгкость?", options:[{text:"Глубина",value:7},{text:"Лёгкость",value:3}] },
         { id: "freedom", text: "Свобода для тебя — это…", options:[{text:"Делать, что чувствую",value:7},{text:"Иметь стабильность",value:3}] },
@@ -26,6 +68,7 @@
 
       let current = 0;
       let answers = JSON.parse(localStorage.getItem("vibe_answers")) || {};
+      let activeUsers = [];
 
       if(Object.keys(answers).length === 0) renderQuestion();
       else showSearchScreen();
@@ -34,7 +77,7 @@
         const q = questions[current];
         document.getElementById("app").innerHTML = `
           <p><b>${q.text}</b></p>
-          ${q.options.map(o=>`<button style="margin:8px 0;width:100%;padding:12px;" onclick="answer('${q.id}',${o.value})">${o.text}</button>`).join("")}
+          ${q.options.map(o=>`<button onclick="answer('${o.id}',${o.value})">${o.text}</button>`).join("")}
         `;
       }
 
@@ -52,66 +95,72 @@
         document.getElementById("app").innerHTML=`
           <p><b>Анкета заполнена</b></p>
           <p>Ищем людей с похожим вайбом…</p>
-          <button style="margin-top:20px;width:100%;padding:14px;" onclick="startMatching()">Найти вайб</button>
+          <button onclick="startMatching()">Найти вайб</button>
         `;
       }
 
-      function startMatching(){
-        const others=[
-          {name:"Анна",vibe:{depth:7,freedom:5,ambition:6}},
-          {name:"Игорь",vibe:{depth:6,freedom:7,ambition:7}},
-          {name:"Мария",vibe:{depth:5,freedom:6,ambition:5}}
-        ];
+      // Signal сервер
+      const ws = new WebSocket("ws://YOUR_PUBLIC_IP:8080"); // <- замени на IP/VPS
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type:"join", user: {id:user.id, name:user.first_name} }));
+      };
 
-        document.getElementById("app").innerHTML=`<p><b>Мы подобрали людей с похожим вайбом!</b></p><div id="matches"></div>`;
+      ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+
+        if(data.type==="update_users"){
+          activeUsers = data.users.filter(u=>u.id !== user.id);
+        }
+
+        if(data.type==="signal" && data.to === user.id){
+          if(peerMap[data.from]){
+            peerMap[data.from].signal(data.signal);
+          }
+        }
+      };
+
+      const peerMap = {};
+
+      function startMatching(){
+        document.getElementById("app").innerHTML=`<p><b>Доступные пользователи для звонка:</b></p><div id="matches"></div>`;
         const container=document.getElementById("matches");
 
-        others.forEach(o=>{
+        if(activeUsers.length===0){
+          container.innerHTML="<p>Пока нет подключённых пользователей. Подождите…</p>";
+          return;
+        }
+
+        activeUsers.forEach(o=>{
           const div=document.createElement("div");
-          div.style.border="1px solid #ccc";
-          div.style.padding="10px";
-          div.style.margin="8px 0";
-          div.style.borderRadius="8px";
+          div.className="user-card";
           div.innerHTML=`
             <p><b>${o.name}</b></p>
-            <p>Глубина:${o.vibe.depth}, Свобода:${o.vibe.freedom}, Амбиции:${o.vibe.ambition}</p>
-            <button style="margin-top:6px;padding:8px;width:100%;" onclick="startCall('${o.name}')">Позвонить</button>
+            <button onclick="startCall(${o.id},'${o.name}')">Позвонить</button>
           `;
           container.appendChild(div);
         });
       }
 
-      function startCall(name){
+      function startCall(peerId, peerName){
         document.getElementById("app").innerHTML=`
-          <p><b>Созвон с ${name}…</b></p>
-          <video id="localVideo" autoplay muted style="width:100%;"></video>
-          <video id="remoteVideo" autoplay style="width:100%;margin-top:10px;"></video>
+          <p><b>Созвон с ${peerName}…</b></p>
+          <video id="localVideo" autoplay muted></video>
+          <video id="remoteVideo" autoplay></video>
         `;
 
-        // Подключение к Signal серверу
-        const ws = new WebSocket("ws://IP_ИЛИ_ДОМЕН_СЕРВЕРА:8080"); // <- если на VPS, укажи IP сервера
-        const peer = new SimplePeer({ initiator: true, trickle: false, stream: null });
-
-        // Локальное видео и микрофон
         navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(stream=>{
           document.getElementById("localVideo").srcObject = stream;
-          peer.addStream(stream);
-        });
 
-        // Отправляем сигнал на сервер
-        peer.on('signal', data => {
-          ws.send(JSON.stringify({signal:data,name}));
-        });
+          const peer = new SimplePeer({initiator:true,trickle:false,stream:stream});
+          peerMap[peerId] = peer;
 
-        // Получаем сигнал от других
-        ws.onmessage = (msg) => {
-          const {signal} = JSON.parse(msg.data);
-          peer.signal(signal);
-        };
+          peer.on('signal', signal => {
+            ws.send(JSON.stringify({ type:"signal", signal, from:user.id, to:peerId }));
+          });
 
-        // Отображаем удалённое видео
-        peer.on('stream', stream => {
-          document.getElementById("remoteVideo").srcObject = stream;
+          peer.on('stream', remoteStream => {
+            document.getElementById("remoteVideo").srcObject = remoteStream;
+          });
         });
       }
     </script>
