@@ -49,7 +49,14 @@
       ];
 
       let current = 0;
-      const answers = {};
+      let answers = JSON.parse(localStorage.getItem("vibe_answers"));
+
+      if (!answers) {
+        answers = {};
+        renderQuestion();
+      } else {
+        showSearchScreen();
+      }
 
       function renderQuestion() {
         const q = questions[current];
@@ -74,19 +81,33 @@
         if (current < questions.length) {
           renderQuestion();
         } else {
-          showResult();
+          localStorage.setItem(
+            "vibe_answers",
+            JSON.stringify(answers)
+          );
+          showSearchScreen();
         }
       }
 
-      function showResult() {
+      function showSearchScreen() {
         document.getElementById("app").innerHTML = `
           <p><b>Анкета заполнена</b></p>
-          <p>Спасибо, ${user?.first_name || "друг"}!</p>
-          <pre>${JSON.stringify(answers, null, 2)}</pre>
+          <p>Ищем людей с похожим вайбом…</p>
+          <button
+            style="margin-top: 20px; width: 100%; padding: 14px;"
+            onclick="startMatching()"
+          >
+            Найти вайб
+          </button>
         `;
       }
 
-      renderQuestion();
+      function startMatching() {
+        document.getElementById("app").innerHTML = `
+          <p><b>Подбираем вайб-группу…</b></p>
+          <p>Скоро ты познакомишься с новыми людьми ✨</p>
+        `;
+      }
     </script>
   </body>
 </html>
