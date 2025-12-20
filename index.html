@@ -4,9 +4,29 @@
     <meta charset="UTF-8" />
     <title>Vibe App</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
-  <body style="font-family: sans-serif; text-align: center; padding: 40px;">
+
+  <body style="font-family: sans-serif; padding: 20px;">
     <h1>Vibe Match</h1>
-    <p>Приложение запускается…</p>
+
+    <div id="content">Загружаем Telegram данные…</div>
+
+    <script>
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+
+      const user = tg.initDataUnsafe?.user;
+
+      if (user) {
+        document.getElementById("content").innerHTML = `
+          <p><b>Привет, ${user.first_name}</b></p>
+          <p>Твой Telegram ID: ${user.id}</p>
+        `;
+      } else {
+        document.getElementById("content").innerText =
+          "Не удалось получить данные пользователя";
+      }
+    </script>
   </body>
 </html>
