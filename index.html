@@ -103,9 +103,38 @@
       }
 
       function startMatching() {
+        // Симулируем 3 других человека
+        const others = [
+          { name: "Анна", vibe: { depth: 7, freedom: 5, ambition: 6 } },
+          { name: "Игорь", vibe: { depth: 6, freedom: 7, ambition: 7 } },
+          { name: "Мария", vibe: { depth: 5, freedom: 6, ambition: 5 } }
+        ];
+
         document.getElementById("app").innerHTML = `
-          <p><b>Подбираем вайб-группу…</b></p>
-          <p>Скоро ты познакомишься с новыми людьми ✨</p>
+          <p><b>Мы подобрали людей с похожим вайбом!</b></p>
+          <div id="matches"></div>
+        `;
+
+        const container = document.getElementById("matches");
+        others.forEach((o) => {
+          const div = document.createElement("div");
+          div.style.border = "1px solid #ccc";
+          div.style.padding = "10px";
+          div.style.margin = "8px 0";
+          div.style.borderRadius = "8px";
+          div.innerHTML = `
+            <p><b>${o.name}</b></p>
+            <p>Глубина: ${o.vibe.depth}, Свобода: ${o.vibe.freedom}, Амбиции: ${o.vibe.ambition}</p>
+            <button style="margin-top: 6px; padding: 8px; width: 100%;" onclick="startCall('${o.name}')">Позвонить</button>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      function startCall(name) {
+        document.getElementById("app").innerHTML = `
+          <p><b>Созвон с ${name}…</b></p>
+          <p>Здесь будет WebRTC-видео или аудио</p>
         `;
       }
     </script>
